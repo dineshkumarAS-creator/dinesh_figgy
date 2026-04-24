@@ -1,0 +1,206 @@
+# Zone Configuration for Soft Verification Service
+# Defines geographic boundaries and centroids for claim zones
+# Used by ChallengeFactory and ChallengeEvaluator for location validation
+
+zones:
+  # Delhi - Central (Connaught Place area)
+  DL-CENTRAL-01:
+    centroid_lat: 28.6139
+    centroid_lon: 77.2090
+    lat_range:
+      min: 28.60
+      max: 28.65
+    lon_range:
+      min: 77.20
+      max: 77.25
+    location_tolerance_km: 2.0
+    description: "Central Delhi - Connaught Place, Hotel region"
+
+  # Delhi - South (Hauz Khas, Saket area)
+  DL-SOUTH-02:
+    centroid_lat: 28.5494
+    centroid_lon: 77.1964
+    lat_range:
+      min: 28.54
+      max: 28.56
+    lon_range:
+      min: 77.19
+      max: 77.22
+    location_tolerance_km: 2.0
+    description: "South Delhi - Hauz Khas, Saket"
+
+  # Delhi - East (Prashant Vihar area)
+  DL-EAST-03:
+    centroid_lat: 28.6010
+    centroid_lon: 77.3250
+    lat_range:
+      min: 28.59
+      max: 28.61
+    lon_range:
+      min: 77.32
+      max: 77.34
+    location_tolerance_km: 2.0
+    description: "East Delhi - Prashant Vihar, Mayur Vihar"
+
+  # Delhi - West (Sector 15 Rohini area)
+  DL-WEST-04:
+    centroid_lat: 28.7509
+    centroid_lon: 77.0409
+    lat_range:
+      min: 28.74
+      max: 28.76
+    lon_range:
+      min: 77.03
+      max: 77.05
+    location_tolerance_km: 2.0
+    description: "West Delhi - Rohini, Dwarka"
+
+  # Delhi - North (Model Town area)
+  DL-NORTH-05:
+    centroid_lat: 28.7285
+    centroid_lon: 77.2197
+    lat_range:
+      min: 28.72
+      max: 28.74
+    lon_range:
+      min: 77.20
+      max: 77.24
+    location_tolerance_km: 2.0
+    description: "North Delhi - Model Town, Pitampura"
+
+  # Noida - Central (DND Flyway area)
+  NOIDA-CENTRAL-06:
+    centroid_lat: 28.5921
+    centroid_lon: 77.0460
+    lat_range:
+      min: 28.58
+      max: 28.60
+    lon_range:
+      min: 77.03
+      max: 77.07
+    location_tolerance_km: 2.5
+    description: "Noida Central - DND Flyway, Sector 18"
+
+  # Noida - East (Sector 62 area)
+  NOIDA-EAST-07:
+    centroid_lat: 28.5747
+    centroid_lon: 77.3826
+    lat_range:
+      min: 28.56
+      max: 28.59
+    lon_range:
+      min: 77.37
+      max: 77.41
+    location_tolerance_km: 2.5
+    description: "Noida East - Sector 62, Greater Noida"
+
+  # Gurugram - Central (MG Road area)
+  GURUGRAM-CENTRAL-08:
+    centroid_lat: 28.4089
+    centroid_lon: 77.0235
+    lat_range:
+      min: 28.40
+      max: 28.42
+    lon_range:
+      min: 77.01
+      max: 77.04
+    location_tolerance_km: 2.5
+    description: "Gurugram Central - MG Road, Sector 14"
+
+  # Gurugram - South (Sector 31 area)
+  GURUGRAM-SOUTH-09:
+    centroid_lat: 28.3780
+    centroid_lon: 77.0570
+    lat_range:
+      min: 28.36
+      max: 28.39
+    lon_range:
+      min: 77.04
+      max: 77.08
+    location_tolerance_km: 2.5
+    description: "Gurugram South - Sector 31, Golf Course Road"
+
+  # Bangalore - Central (Brigade area)
+  BLR-CENTRAL-10:
+    centroid_lat: 12.9716
+    centroid_lon: 77.5946
+    lat_range:
+      min: 12.96
+      max: 12.98
+    lon_range:
+      min: 77.58
+      max: 77.62
+    location_tolerance_km: 2.0
+    description: "Bangalore Central - Brigade, MG Road"
+
+  # Bangalore - Whitefield
+  BLR-WHITEFIELD-11:
+    centroid_lat: 12.9698
+    centroid_lon: 77.7499
+    lat_range:
+      min: 12.96
+      max: 12.98
+    lon_range:
+      min: 77.74
+      max: 77.78
+    location_tolerance_km: 2.5
+    description: "Bangalore Whitefield - Tech Park, Embassy"
+
+  # Mumbai - South (Colaba, Fort area)
+  MUM-SOUTH-12:
+    centroid_lat: 18.9676
+    centroid_lon: 72.8194
+    lat_range:
+      min: 18.95
+      max: 18.98
+    lon_range:
+      min: 72.81
+      max: 72.84
+    location_tolerance_km: 2.0
+    description: "Mumbai South - Colaba, Fort, Downtown"
+
+  # Mumbai - Central (Bandra, Worli area)
+  MUM-CENTRAL-13:
+    centroid_lat: 19.0599
+    centroid_lon: 72.8295
+    lat_range:
+      min: 19.04
+      max: 19.08
+    lon_range:
+      min: 72.82
+      max: 72.84
+    location_tolerance_km: 2.5
+    description: "Mumbai Central - Bandra, Worli, Sea Link"
+
+  # Mumbai - North (Andheri, Vile Parle area)
+  MUM-NORTH-14:
+    centroid_lat: 19.1136
+    centroid_lon: 72.8697
+    lat_range:
+      min: 19.10
+      max: 19.13
+    lon_range:
+      min: 72.85
+      max: 72.90
+    location_tolerance_km: 2.5
+    description: "Mumbai North - Andheri, Vile Parle, Airport area"
+
+  # Hyderabad - Central (Banjara Hills area)
+  HYD-CENTRAL-15:
+    centroid_lat: 17.3850
+    centroid_lon: 78.4867
+    lat_range:
+      min: 17.37
+      max: 17.40
+    lon_range:
+      min: 78.48
+      max: 78.50
+    location_tolerance_km: 2.0
+    description: "Hyderabad Central - Banjara Hills, jubilee Hills"
+
+# Default configuration values
+defaults:
+  location_tolerance_km: 2.0  # Default 2km tolerance
+  challenge_duration_minutes: 30  # Standard 30-min window
+  reminder_sent_at_minutes: 20  # Send reminder at 20-min mark
+  escalation_check_interval_seconds: 120  # Check every 2 minutes

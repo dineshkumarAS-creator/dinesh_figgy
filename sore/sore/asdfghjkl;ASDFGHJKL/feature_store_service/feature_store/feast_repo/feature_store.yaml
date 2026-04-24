@@ -1,0 +1,8 @@
+project: figgy_feature_store
+registry: data/registry.db
+provider: local
+online_store:
+  type: redis
+  connection_string: redis://localhost:6379
+offline_store:
+  type: file

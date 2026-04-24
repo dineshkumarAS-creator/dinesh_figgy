@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Figgy Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f8fb; color: #1f2937; }
+    h1, h2 { margin: 0 0 12px 0; }
+    .grid { display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; }
+    .label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .value { font-size: 20px; font-weight: 700; }
+    .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 8px; }
+    th { background: #f3f4f6; }
+    .status { text-transform: capitalize; }
+  </style>
+</head>
+<body>
+  <h1>Figgy Admin Dashboard</h1>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Active Policies</div>
+      <div class="value">{{ stats.active_policies }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Premium Collected</div>
+      <div class="value">₹{{ stats.total_premium_collected }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Claims This Week</div>
+      <div class="value">{{ stats.claims_this_week }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Fraud Cases Blocked</div>
+      <div class="value">{{ stats.fraud_blocked }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Payout Total</div>
+      <div class="value">₹{{ stats.payout_total }}</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Claims</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>claim_id</th>
+          <th>worker_id</th>
+          <th>zone</th>
+          <th>disruption</th>
+          <th>status</th>
+          <th>payout</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in claims_rows %}
+        <tr>
+          <td>{{ c.get("claim_id", "") }}</td>
+          <td>{{ c.get("worker_id", "") }}</td>
+          <td>{{ c.get("zone", "") }}</td>
+          <td>{{ c.get("disruption_type", c.get("trigger_type", "")) }}</td>
+          <td class="status">{{ c.get("status", "") }}</td>
+          <td>₹{{ c.get("eligible_payout", 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Trigger Log (Last 10)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>zone</th>
+          <th>type</th>
+          <th>workers_affected</th>
+          <th>created_at</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trigger_log %}
+        <tr>
+          <td>{{ t.zone }}</td>
+          <td>{{ t.type }}</td>
+          <td>{{ t.workers_affected }}</td>
+          <td>{{ t.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Claims by Disruption Type</h2>
+    <canvas id="claimsChart" height="100"></canvas>
+  </div>
+
+  <script>
+    const labels = {{ chart_labels | tojson }};
+    const values = {{ chart_values | tojson }};
+    new Chart(document.getElementById('claimsChart'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Claims',
+          data: values,
+          backgroundColor: '#3b82f6'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  </script>
+</body>
+</html>

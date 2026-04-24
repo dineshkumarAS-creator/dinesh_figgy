@@ -1,0 +1,26 @@
+kafka_bootstrap_servers: localhost:9092
+events_topic: events
+events_dlq_topic: events_dlq
+redis_url: redis://localhost:6379/0
+redis_ttl_seconds: 21600
+
+data_gov_feed: https://data.gov.in/rss
+pib_feed: https://archive.pib.gov.in/rss/press_release.rss
+state_feeds:
+  - https://state.gov.in/feeds/notifications.rss
+
+newsapi_url: https://newsapi.org/v2/everything
+newsapi_key: YOUR_NEWSAPI_KEY
+gnews_url: https://gnews.io/api/v4/search
+gnews_key: YOUR_GNEWS_KEY
+keywords:
+  - curfew
+  - bandh
+  - strike
+  - protest
+  - section 144
+  - shutdown
+source_credibility:
+  newsapi.org: 0.9
+  gnews.io: 0.85
+spacy_model: en_core_web_sm

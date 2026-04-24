@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "WeatherData",
+  "namespace": "figgy.weather",
+  "fields": [
+    {"name": "location", "type": "string"},
+    {"name": "timestamp", "type": "long", "logicalType": "timestamp-millis"},
+    {"name": "temperature_c", "type": ["null", "float"], "default": null},
+    {"name": "humidity_pct", "type": ["null", "float"], "default": null},
+    {"name": "wind_speed_kmh", "type": ["null", "float"], "default": null},
+    {"name": "pressure_hpa", "type": ["null", "float"], "default": null},
+    {"name": "description", "type": ["null", "string"], "default": null}
+  ]
+}

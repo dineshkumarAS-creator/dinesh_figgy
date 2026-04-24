@@ -1,0 +1,47 @@
+{
+  "name": "figgy-pow-blockchain",
+  "version": "1.0.0",
+  "description": "FIGGY Proof-of-Work Activity Token Smart Contracts (Polygon)",
+  "main": "hardhat.config.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:coverage": "hardhat coverage",
+    "deploy:local": "hardhat run scripts/deploy_pow_token.js --network localhost && hardhat run scripts/deploy_payout_vault.js --network localhost",
+    "deploy:mumbai": "hardhat run scripts/deploy_pow_token.js --network mumbai && hardhat run scripts/deploy_payout_vault.js --network mumbai",
+    "deploy:polygon": "hardhat run scripts/deploy_pow_token.js --network polygon && hardhat run scripts/deploy_payout_vault.js --network polygon",
+    "node": "hardhat node",
+    "node:fork": "hardhat node --fork https://polygon-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_KEY",
+    "verify:mumbai": "hardhat verify --network mumbai",
+    "verify:polygon": "hardhat verify --network polygon",
+    "gas-report": "REPORT_GAS=true hardhat test",
+    "clean": "hardhat clean"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": ">=9.1.0",
+    "chai": "^4.2.0",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.7.1",
+    "hardhat": "^2.17.1",
+    "hardhat-deploy": "^0.12.4",
+    "hardhat-gas-reporter": "^1.0.8",
+    "solidity-coverage": "^0.8.4",
+    "typechain": "^8.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

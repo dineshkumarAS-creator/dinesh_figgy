@@ -1,0 +1,176 @@
+"""
+Layer 4 Orchestrator Configuration
+"""
+
+# ==============================================================================
+# Kafka Configuration
+# ==============================================================================
+kafka:
+  bootstrap_servers: "localhost:9092"
+  broker_list:
+    - "localhost:9092"
+  
+  # Input topics
+  input_topics:
+    ml_scores: "ml_scores"
+  
+  # Output topics
+  output_topics:
+    composite_scores: "composite_scores"
+    routing_decisions: "routing_decisions"
+  
+  # Consumer groups
+  consumer_groups:
+    score_collection: "layer4_score_collection"
+  
+  # Timeouts and retries
+  max_poll_records: 500
+  session_timeout_ms: 10000
+  request_timeout_ms: 40000
+
+# ==============================================================================
+# Redis Configuration
+# ==============================================================================
+redis:
+  url: "redis://localhost:6379/2"
+  
+  # Buffer expiration
+  buffer_ttl_seconds: 10
+  
+  # Result storage TTL
+  composite_score_ttl_seconds: 1800  # 30 minutes
+  routing_decision_ttl_seconds: 1800  # 30 minutes
+  
+  # Connection pool
+  max_connections: 50
+  connect_timeout: 5
+
+# ==============================================================================
+# Score Fusion Configuration
+# ==============================================================================
+score_fusion:
+  # Wait time for all 3 model scores to be collected
+  wait_timeout_seconds: 2.0
+  
+  # Fallback heuristic weights (when LSTM times out)
+  fallback_lstm_weights:
+    motion_continuity_score: 0.5
+    road_match_score: 0.3
+    app_foreground_ratio: 0.2
+  
+  # Model versions for reference
+  model_versions:
+    lstm: "v2.1.0"
+    isolation_forest: "v1.5.0"
+    gbm: "v3.0.1"
+    parametric_trigger: "v1.0.0"
+
+# ==============================================================================
+# Routing Configuration
+# ==============================================================================
+routing:
+  # Thresholds for routing decisions
+  low_risk_threshold: 0.65    # Score >= this → auto_payout (if high confidence)
+  high_risk_threshold: 0.30   # Score < this → manual_flag (fraud risk)
+  
+  # Confidence level thresholds for quality assessment
+  high_confidence_min_score_quality: 0.7
+  medium_confidence_min_score_quality: 0.4
+  
+  # Alert threshold: auto-payout rate should stay >= this
+  auto_payout_rate_alert_threshold_percent: 20.0
+
+# ==============================================================================
+# API Configuration
+# ==============================================================================
+api:
+  host: "0.0.0.0"
+  port: 8004
+  
+  # Dashboard aggregation window
+  dashboard_window_hours: 1.0
+
+# ==============================================================================
+# Metrics Configuration
+# ==============================================================================
+metrics:
+  # Prometheus port
+  prometheus_port: 8004
+  
+  # Metric buckets
+  composite_score_buckets:
+    - 0.0
+    - 0.1
+    - 0.2
+    - 0.3
+    - 0.4
+    - 0.5
+    - 0.6
+    - 0.65
+    - 0.7
+    - 0.8
+    - 0.9
+    - 1.0
+  
+  fusion_latency_buckets_ms:
+    - 1
+    - 2
+    - 5
+    - 10
+    - 20
+    - 50
+    - 100
+    - 200
+
+# ==============================================================================
+# Logging Configuration
+# ==============================================================================
+logging:
+  level: "INFO"
+  format: "json"  # JSON structured logging
+  
+  # Log levels by component
+  components:
+    score_collector: "INFO"
+    score_fuser: "INFO"
+    claim_router: "INFO"
+    publisher: "INFO"
+    api: "INFO"
+
+# ==============================================================================
+# Feature Quality Thresholds
+# ==============================================================================
+data_quality:
+  # Overall feature quality for confidence assessment
+  high_confidence_feature_quality_min: 0.7
+  medium_confidence_feature_quality_min: 0.4
+  low_confidence_feature_quality_min: 0.0
+  
+  # Individual component quality thresholds
+  env_feature_quality_min: 0.3
+  behaviour_feature_quality_min: 0.3
+  income_feature_quality_min: 0.3
+
+# ==============================================================================
+# Monitoring & Alerting
+# ==============================================================================
+monitoring:
+  # Alert conditions
+  alerts:
+    - metric: "auto_payout_rate"
+      threshold: 20.0
+      direction: "below"  # Alert if drops below
+      message: "Auto-payout rate anomaly detected (possible model degradation)"
+    
+    - metric: "model_timeout_rate"
+      threshold: 5.0
+      direction: "above"  # Alert if exceeds
+      message: "Model timeout rate elevated (ML scoring latency issue)"
+    
+    - metric: "fusion_latency_p95"
+      threshold: 100.0  # milliseconds
+      direction: "above"
+      message: "Score fusion latency degradation"
+  
+  # Metrics retention
+  metrics_retention_days: 30

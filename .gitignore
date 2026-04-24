@@ -1,0 +1,25 @@
+# Python Ignores
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+.env
+
+# Flutter/Dart Ignores
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+android/app/key.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Others
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

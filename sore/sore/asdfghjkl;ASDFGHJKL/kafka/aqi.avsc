@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "AQIData",
+  "namespace": "figgy.aqi",
+  "fields": [
+    {"name": "location", "type": "string"},
+    {"name": "timestamp", "type": "long", "logicalType": "timestamp-millis"},
+    {"name": "aqi_value", "type": "int"},
+    {"name": "pm25", "type": ["null", "float"], "default": null},
+    {"name": "pm10", "type": ["null", "float"], "default": null},
+    {"name": "o3", "type": ["null", "float"], "default": null},
+    {"name": "no2", "type": ["null", "float"], "default": null},
+    {"name": "so2", "type": ["null", "float"], "default": null},
+    {"name": "co", "type": ["null", "float"], "default": null}
+  ]
+}

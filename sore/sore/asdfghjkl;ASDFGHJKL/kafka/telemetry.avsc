@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "TelemetryEvent",
+  "namespace": "figgy.telemetry",
+  "fields": [
+    {"name": "worker_id", "type": "string"},
+    {"name": "event_type", "type": {"type": "enum", "name": "EventType", "symbols": ["gps", "imu", "app_state", "delivery_attempt"]}},
+    {"name": "timestamp_utc", "type": "string"},
+    {"name": "lat", "type": ["null", "float"], "default": null},
+    {"name": "lon", "type": ["null", "float"], "default": null},
+    {"name": "accuracy_m", "type": ["null", "float"], "default": null},
+    {"name": "speed_kmh", "type": ["null", "float"], "default": null},
+    {"name": "accel_x", "type": ["null", "float"], "default": null},
+    {"name": "accel_y", "type": ["null", "float"], "default": null},
+    {"name": "accel_z", "type": ["null", "float"], "default": null},
+    {"name": "gyro_x", "type": ["null", "float"], "default": null},
+    {"name": "gyro_y", "type": ["null", "float"], "default": null},
+    {"name": "gyro_z", "type": ["null", "float"], "default": null},
+    {"name": "app_state", "type": ["null", {"type": "enum", "name": "AppState", "symbols": ["foreground", "background", "offline"]}], "default": null},
+    {"name": "delivery_zone_id", "type": ["null", "string"], "default": null},
+    {"name": "battery_pct", "type": ["null", "int"], "default": null}
+  ]
+}

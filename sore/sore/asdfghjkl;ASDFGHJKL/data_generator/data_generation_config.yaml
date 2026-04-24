@@ -1,0 +1,80 @@
+# Data Generation Configuration for FIGGY ML Training
+
+# Genuine worker archetypes
+genuine_archetypes:
+  - normal
+  - rain_worker
+  - high_aqi
+
+# Fraud types
+fraud_types:
+  - gps_spoof
+  - app_manipulation
+  - income_inflation
+
+# Cities
+cities:
+  - Delhi
+  - Mumbai
+  - Bangalore
+  - Chennai
+
+# Worker tiers
+worker_tiers:
+  - standard
+  - premium
+
+# Session parameters
+session:
+  min_duration_minutes: 30
+  max_duration_minutes: 120
+  sequence_length: 60  # For LSTM
+
+# Feature distributions
+features:
+  rainfall:
+    scale: 5  # Exponential distribution parameter
+  aqi:
+    mean: 100
+    std: 20
+  displacement:
+    mean_log: 4
+    std_log: 0.5
+  speed:
+    mean_log: 2
+    std_log: 0.3
+  motion_continuity:
+    min: 0.7
+    max: 0.95
+  road_match:
+    min: 0.75
+    max: 0.98
+  app_ratio:
+    min: 0.8
+    max: 1.0
+
+# Fraud parameters
+fraud:
+  gps_spoof:
+    displacement_multiplier: 2.0
+    speed_multiplier: 1.5
+    motion_continuity_min: 0.3
+    road_match_max: 0.5
+  app_manipulation:
+    app_ratio_max: 0.4
+  income_inflation:
+    earnings_multiplier_min: 1.5
+    earnings_multiplier_max: 3.0
+
+# Dataset sizes
+dataset:
+  n_genuine_train: 10000
+  n_fraud_train: 5000
+  n_genuine_test: 2000
+  n_fraud_test: 1000
+
+# Output directories
+output:
+  train_dir: "generated_data/train/"
+  test_dir: "generated_data/test/"
+  plots_dir: "generated_data/plots/"

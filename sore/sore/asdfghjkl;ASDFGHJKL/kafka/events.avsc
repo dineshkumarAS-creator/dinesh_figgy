@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "EventData",
+  "namespace": "figgy.events",
+  "fields": [
+    {"name": "source", "type": "string"},
+    {"name": "timestamp", "type": "long", "logicalType": "timestamp-millis"},
+    {"name": "title", "type": "string"},
+    {"name": "content", "type": "string"},
+    {"name": "url", "type": ["null", "string"], "default": null},
+    {"name": "category", "type": ["null", "string"], "default": null},
+    {"name": "location", "type": ["null", "string"], "default": null}
+  ]
+}
