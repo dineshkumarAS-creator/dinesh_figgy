@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-import '../widgets/timeline_feed.dart';
 import '../widgets/alert_cards.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/shake_transition.dart';
 import '../core/simulation_controller.dart';
+import 'package:figgy_app/core/ride_sync_controller.dart';
 
 class MyShieldScreenContent extends StatefulWidget {
   const MyShieldScreenContent({super.key});
@@ -14,80 +13,63 @@ class MyShieldScreenContent extends StatefulWidget {
 }
 
 class _MyShieldScreenContentState extends State<MyShieldScreenContent> with TickerProviderStateMixin {
-  int _simulationStep = 0;
-  
-  // Controllers as requested
-  late AnimationController _progressCtrl;
   late AnimationController _pulseCtrl;
-  late AnimationController _disruptionCtrl;
   late AnimationController _shakeCtrl;
   late AnimationController _claimCtrl;
-  late AnimationController _entranceCtrl; // For initial rides
+
+  // Ride data
+  static const List<Map<String, dynamic>> _rides = [
+    {'num': 1, 'route': 'Nungambakkam → Anna Nagar',   'time': '9:10 AM',  'earn': '+₹80'},
+    {'num': 2, 'route': 'Anna Nagar → Velachery',       'time': '10:05 AM', 'earn': '+₹120'},
+    {'num': 3, 'route': 'Velachery → T Nagar',           'time': '10:58 AM', 'earn': '+₹100'},
+    {'num': 4, 'route': 'T Nagar → Mylapore',            'time': '11:30 AM', 'earn': '+₹90'},
+    {'num': 5, 'route': 'Mylapore → Adyar',              'time': '1:40 PM',  'earn': '-₹300'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    
-    _progressCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
-    _disruptionCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
-    _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _claimCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _entranceCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _claimCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
 
-    // Start simulation automatically for demo purposes
-    _runSimulation();
+    RideSyncController.instance.addListener(_onSync);
   }
 
-  Future<void> _runSimulation() async {
-    // Stage 1: Ride 1 enters with blue circle
-    setState(() => _simulationStep = 1);
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Progress bar fills
-    await _progressCtrl.forward();
-    
-    // Stage 2: Circle turns green, bridge expands, Rides 2 & 3 bounce in
-    setState(() => _simulationStep = 2);
-    _entranceCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 1500));
-    
-    // Stage 3: Ride 4 enters gray
-    setState(() => _simulationStep = 3);
-    await Future.delayed(const Duration(milliseconds: 1000));
-    
-    // Stage 4: Circle turns amber and pulses, Disruption card slides up
-    setState(() => _simulationStep = 4);
-    _pulseCtrl.repeat(reverse: true);
-    _disruptionCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 2000));
-    
-    // Stage 5: Ride 5 circle turns red, amount flips, Blocked card shakes
-    setState(() => _simulationStep = 5);
-    await _shakeCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 1500));
-    
-    // Stage 6: Claim auto-triggers, circle green, card bounces
-    setState(() => _simulationStep = 6);
-    _pulseCtrl.stop();
-    _claimCtrl.forward();
+  void _onSync() {
+    if (!mounted) return;
+    final sync = RideSyncController.instance;
+    setState(() {});
+
+    if (sync.currentRideIndex == 4 && !_pulseCtrl.isAnimating) {
+      _pulseCtrl.repeat(reverse: true);
+    }
+    if (sync.currentRideIndex == 5 && !_shakeCtrl.isAnimating) {
+      _shakeCtrl.repeat(reverse: true); // Shake repeatedly while blocked
+    }
+    if (sync.currentRideIndex > 5) {
+      _shakeCtrl.stop();
+      if (_claimCtrl.value == 0) {
+        _pulseCtrl.stop();
+        _claimCtrl.forward();
+      }
+    }
   }
 
   @override
   void dispose() {
-    _progressCtrl.dispose();
+    RideSyncController.instance.removeListener(_onSync);
     _pulseCtrl.dispose();
-    _disruptionCtrl.dispose();
     _shakeCtrl.dispose();
     _claimCtrl.dispose();
-    _entranceCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    const d = DemoDisruption.rain;
-    final meta = _disruptionMeta(d);
+    final sync = RideSyncController.instance;
+    final currentIdx = sync.currentRideIndex;
+    final progress = sync.rideProgress;
 
     return Stack(
       children: [
@@ -96,8 +78,6 @@ class _MyShieldScreenContentState extends State<MyShieldScreenContent> with Tick
           child: Column(
             children: [
               const SizedBox(height: 16),
-              
-              // Smart Plan Card
               _buildPlanCard(),
 
               Padding(
@@ -106,293 +86,390 @@ class _MyShieldScreenContentState extends State<MyShieldScreenContent> with Tick
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "TODAY'S RIDES — APR 2",
-                      style: TextStyle(color: Color(0xFF6B7280), letterSpacing: 1.2, fontWeight: FontWeight.w500, fontSize: 10),
+                      "TODAY'S RIDES — LIVE",
+                      style: TextStyle(color: Color(0xFF6B7280), letterSpacing: 1.2, fontWeight: FontWeight.w600, fontSize: 11),
                     ),
                     const SizedBox(height: 20),
-                    
-                    // Ride 1 (Animated)
-                    _buildRide1(),
 
-                    // Ride 2 & 3 (Staggered Entrance)
-                    if (_simulationStep >= 2) ...[
-                       _buildStaggeredRide(2, 'Ride 2', 'Koyambedu -> T Nagar · 10:05 AM', '+₹120', delay: 0),
-                       _buildStaggeredRide(3, 'Ride 3', 'T Nagar -> Mylapore · 10:58 AM', '+₹100', delay: 120),
-                    ],
+                    // Build each ride
+                    for (int i = 0; i < _rides.length; i++)
+                      if (currentIdx >= _rides[i]['num'])
+                        _buildRideNode(i, currentIdx, progress),
 
-                    if (_simulationStep >= 3) ...[
-                      const SizedBox(height: 16),
-                      _buildRide4(),
-                    ],
+                    // Disruption card after Ride 4
+                    if (currentIdx >= 4)
+                      _buildRevealWrapper(
+                        key: const ValueKey('disruption_card'),
+                        child: _buildDisruptionCard(),
+                      ),
 
-                    if (_simulationStep >= 4)
-                      _buildDisruptionSection(meta),
-                    
-                    if (_simulationStep >= 5) ...[
-                      _buildRide5(),
-                      const SizedBox(height: 8),
-                    ],
+                    // Blocked card after Ride 5
+                    if (currentIdx >= 5)
+                      _buildRevealWrapper(
+                        key: const ValueKey('blocked_card'),
+                        child: _buildBlockedCard(),
+                      ),
 
-                    if (_simulationStep >= 6)
-                      _buildClaimSection(),
+                    // Claim card
+                    if (currentIdx > 5)
+                      _buildRevealWrapper(
+                        key: const ValueKey('claim_card'),
+                        child: _buildClaimCard(),
+                      ),
                   ],
                 ),
               ),
-              
-              if (_simulationStep >= 6)
-                SummaryCard(mode: d),
-              
+
+              if (currentIdx > 5) SummaryCard(mode: DemoDisruption.rain),
               const ManualFileButton(),
-              const SizedBox(height: 100), 
+              const SizedBox(height: 100),
             ],
           ),
         ),
-        
-        // Bottom Banner Slide-up
-        if (_simulationStep >= 6)
+
+        // Bottom green banner
+        if (currentIdx > 5)
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 0, left: 0, right: 0,
             child: SlideTransition(
               position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
-                CurvedAnimation(parent: _claimCtrl, curve: Curves.easeOutCubic)
+                CurvedAnimation(parent: _claimCtrl, curve: Curves.easeOutCubic),
               ),
               child: _buildBottomBanner(),
             ),
           ),
-        
-        // Reset button for demo
-        Positioned(
-          top: 10,
-          right: 10,
-          child: IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.grey),
-            onPressed: () {
-              _progressCtrl.reset();
-              _pulseCtrl.stop();
-              _disruptionCtrl.reset();
-              _shakeCtrl.reset();
-              _claimCtrl.reset();
-              _entranceCtrl.reset();
-              _runSimulation();
-            },
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildPlanCard() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      padding: const EdgeInsets.all(20),
+  // ──────────────────────────────────────────────
+  // SINGLE RIDE NODE (circle + line + progress)
+  // ──────────────────────────────────────────────
+  Widget _buildRideNode(int rideIdx, int currentIdx, double progress) {
+    final ride = _rides[rideIdx];
+    final rideNum = ride['num'] as int;
+    final route = ride['route'] as String;
+    final time = ride['time'] as String;
+    final earn = ride['earn'] as String;
+
+    final bool isCompleted = currentIdx > rideNum;
+    final bool isActive = currentIdx == rideNum;
+    final bool isBlocked = rideNum == 5;
+    final bool isRainWarning = rideNum == 4 && (isActive || currentIdx == 4);
+    final bool isLast = rideIdx == _rides.length - 1;
+
+    // Circle colors
+    Color circleBg, circleText, circleBorder;
+    if (isBlocked && !isCompleted) {
+      circleBg = const Color(0xFFFEE2E2);
+      circleText = const Color(0xFFEF4444);
+      circleBorder = const Color(0xFFEF4444).withOpacity(0.4);
+    } else if (isActive && !isBlocked) {
+      circleBg = isRainWarning ? const Color(0xFFEA580C) : const Color(0xFF3B82F6);
+      circleBorder = isRainWarning ? const Color(0xFFEA580C) : const Color(0xFF3B82F6);
+      circleText = Colors.white;
+    } else if (isCompleted) {
+      circleBg = const Color(0xFFF0FDF4);
+      circleText = const Color(0xFF16A34A);
+      circleBorder = const Color(0xFF16A34A).withOpacity(0.4);
+    } else {
+      circleBg = const Color(0xFFF0FDF4);
+      circleText = const Color(0xFF16A34A);
+      circleBorder = const Color(0xFF16A34A).withOpacity(0.4);
+    }
+
+    // Amount color
+    Color amountColor = earn.startsWith('-') ? const Color(0xFFEF4444) : const Color(0xFF1A1A1A);
+
+    Widget circleWidget = Container(
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE96A10).withOpacity(0.15), width: 1),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
+        shape: BoxShape.circle,
+        color: circleBg,
+        border: Border.all(color: circleBorder, width: 1.5),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text('Smart Plan', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.3), width: 1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text('active', style: TextStyle(color: Color(0xFF16A34A), fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text('₹20/week · Renews Apr 9', style: TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const Icon(Icons.verified_user_outlined, color: Color(0xFFE96A10), size: 28),
-        ],
+      child: Center(
+        child: Text(
+          '$rideNum',
+          style: TextStyle(color: circleText, fontWeight: FontWeight.w900, fontSize: 14),
+        ),
       ),
     );
-  }
 
-  Widget _buildRide1() {
-    bool isDone = _simulationStep >= 2;
-    return Column(
+    // Pulse for Ride 4
+    if (isRainWarning && !isCompleted) {
+      circleWidget = AnimatedBuilder(
+        animation: _pulseCtrl,
+        child: circleWidget,
+        builder: (_, childWidget) => Transform.scale(
+          scale: 1.0 + (_pulseCtrl.value * 0.15),
+          child: childWidget,
+        ),
+      );
+    }
+
+    // Build the connector line widget
+    Widget connectorLine = const SizedBox(height: 16); // padding for the last item
+    if (!isLast || (isLast && currentIdx > rideNum)) {
+      connectorLine = AnimatedBuilder(
+        animation: RideSyncController.instance,
+        builder: (_, __) {
+          final double rawProgress = RideSyncController.instance.rideProgress;
+          final double safeProgress = (rawProgress.isNaN || rawProgress.isInfinite) ? 0.0 : rawProgress.clamp(0.0, 1.0);
+          final double hFact = isCompleted ? 1.0 : (isActive ? safeProgress : 0.0);
+          final lineColor = isCompleted ? const Color(0xFF16A34A) : (isBlocked ? const Color(0xFFEF4444) : (isRainWarning ? const Color(0xFFEA580C) : const Color(0xFF3B82F6)));
+          
+          return Container(
+            width: 52,
+            height: (isActive && !isBlocked) ? 60.0 : 36.0,
+            alignment: Alignment.topCenter,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                // Background track
+                Container(
+                  width: 3,
+                  color: const Color(0xFFE5E7EB),
+                ),
+                // Animated fill
+                Container(
+                  width: 3,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: FractionallySizedBox(
+                      heightFactor: hFact,
+                      alignment: Alignment.topCenter,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                            colors: [lineColor.withOpacity(0.9), lineColor.withOpacity(0.1)],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    Widget rideContent = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TimelineItem(
-          icon: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isDone ? const Color(0xFFF0FDF4) : const Color(0xFFEFF6FF),
-              border: Border.all(color: isDone ? const Color(0xFF16A34A).withOpacity(0.3) : const Color(0xFF3B82F6).withOpacity(0.3)),
-            ),
-            child: Center(
-              child: Text(
-                'R1', 
-                style: TextStyle(
-                  color: isDone ? const Color(0xFF16A34A) : const Color(0xFF3B82F6), 
-                  fontWeight: FontWeight.w800, 
-                  fontSize: 11
-                )
-              ),
-            ),
-          ),
-          title: 'Ride 1',
-          subtitle: 'Anna Nagar -> Vadapalani · 9:10 AM',
-          amount: isDone ? '+₹80' : '',
-          time: '',
-          iconBg: Colors.transparent,
+        // LEFT SIDE: Circle + Connector
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            circleWidget,
+            connectorLine,
+          ],
         ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOutQuart,
-          child: _simulationStep == 1
-            ? Padding(
-                padding: const EdgeInsets.only(left: 48, right: 24, bottom: 24),
-                child: Column(
+        
+        // RIGHT SIDE: Content
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Analysing telemetry...', style: TextStyle(color: Color(0xFF3B82F6), fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    AnimatedBuilder(
-                      animation: _progressCtrl,
-                      builder: (context, child) {
-                        return Container(
-                          height: 6,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ride $rideNum${isBlocked && !isCompleted ? ' — Blocked' : ''}',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF1A1A1A)),
                           ),
-                          child: FractionallySizedBox(
-                            alignment: Alignment.centerLeft,
-                            widthFactor: _progressCtrl.value,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF16A34A),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$route · $time',
+                            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500),
                           ),
-                        );
-                      },
+                        ],
+                      ),
                     ),
+                    if (isCompleted || (isBlocked && !isCompleted))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Text(earn, style: TextStyle(color: amountColor, fontWeight: FontWeight.w800, fontSize: 15)),
+                      ),
                   ],
                 ),
-              )
-            : const SizedBox(width: double.infinity, height: 0),
+              ),
+
+              // Sub-content
+              if (isActive && !isBlocked) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: _buildLiveProgress(isRainWarning),
+                ),
+              ],
+              
+              if (isCompleted && !isBlocked) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: const Color(0xFF16A34A), size: 14),
+                      const SizedBox(width: 6),
+                      const Text('Completed', style: TextStyle(color: Color(0xFF16A34A), fontSize: 11, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );
-  }
 
-  Widget _buildStaggeredRide(int step, String title, String sub, String amount, {required int delay}) {
-    return AnimatedBuilder(
-      animation: _entranceCtrl,
-      builder: (context, child) {
-        double t = (_entranceCtrl.value * 1000 - delay) / 500;
-        t = t.clamp(0.0, 1.0);
-        double curveT = Curves.elasticOut.transform(t);
-        if (t <= 0) return const SizedBox.shrink();
-        
-        return Transform.scale(
-          scale: curveT,
-          child: Opacity(
-            opacity: t.clamp(0.0, 1.0),
-            child: TimelineItem(
-              icon: Text('R$step', style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w800, fontSize: 11)),
-              title: title,
-              subtitle: sub,
-              amount: amount,
-              time: '',
-              iconBg: const Color(0xFFF0FDF4),
-            ),
-          ),
-        );
-      },
+    return _buildRevealWrapper(
+      key: ValueKey('ride_node_$rideNum'),
+      child: isBlocked && !isCompleted ? ShakeTransition(animation: _shakeCtrl, child: rideContent) : rideContent,
     );
   }
 
-  Widget _buildRide4() {
-    bool isPulsing = _simulationStep >= 4;
-    return AnimatedBuilder(
-      animation: _pulseCtrl,
-      builder: (context, child) {
-        double pulse = 1.0 + (_pulseCtrl.value * 0.1);
-        Color circleColor = isPulsing ? const Color(0xFFFFF7ED) : const Color(0xFFF3F4F6);
-        Color textColor = isPulsing ? const Color(0xFFEA580C) : const Color(0xFF6B7280);
-        
-        return TimelineItem(
-          icon: Transform.scale(
-            scale: isPulsing ? pulse : 1.0,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: circleColor,
-                border: Border.all(color: textColor.withOpacity(0.3)),
+  Widget _buildRevealWrapper({required Key key, required Widget child}) {
+    return KeyedSubtree(
+      key: key,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutQuart,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeOutBack,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1.0 - value)),
+                child: child,
               ),
-              child: Center(
-                child: Text('R4', style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 11)),
-              ),
-            ),
-          ),
-          title: 'Ride 4',
-          subtitle: 'Mylapore · 11:30 AM',
-          amount: isPulsing ? '-₹300' : '',
-          amountColor: const Color(0xFFEF4444),
-          time: '',
-          iconBg: Colors.transparent,
-        );
-      },
-    );
-  }
-
-  Widget _buildDisruptionSection(_DisruptionCopy meta) {
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-        CurvedAnimation(parent: _disruptionCtrl, curve: Curves.easeOutBack)
+            );
+          },
+          child: child,
+        ),
       ),
-      child: FadeTransition(
-        opacity: _disruptionCtrl,
-        child: Column(
-          children: [
-            TimelineItem(
-              icon: Icon(meta.icon, color: meta.accent, size: 16),
-              title: meta.headline,
-              subtitle: '',
-              amount: '',
-              time: '11:30 AM',
-              iconBg: const Color(0xFFE0F2FE),
+    );
+  }
+
+  Widget _buildLiveProgress(bool isRainWarning) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: isRainWarning ? const Color(0xFFEA580C) : const Color(0xFF3B82F6))),
+              const SizedBox(width: 8),
+              Text(
+                isRainWarning ? 'Heavy rain nearby — monitoring...' : 'Analysing telemetry...',
+                style: TextStyle(color: isRainWarning ? const Color(0xFFEA580C) : const Color(0xFF3B82F6), fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          AnimatedBuilder(
+            animation: RideSyncController.instance,
+            builder: (_, __) => Container(
+              height: 6, width: double.infinity,
+              decoration: BoxDecoration(color: isRainWarning ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(10)),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: ((RideSyncController.instance.rideProgress.isNaN || RideSyncController.instance.rideProgress.isInfinite) 
+                    ? 0.0 
+                    : RideSyncController.instance.rideProgress).clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: isRainWarning ? [const Color(0xFFEA580C), const Color(0xFFF59E0B)] : [const Color(0xFF3B82F6), const Color(0xFF16A34A)]),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
             ),
-            _wrapWithStem(
-              DisruptionAlertCard(
-                accent: meta.accent,
-                areaLabel: meta.area,
-                body: meta.detail,
-                duration: meta.duration,
+          ),
+        ],
+      ),
+    );
+
+
+
+  }
+
+  // ──────────────────────────────────────────────
+  // DISRUPTION CARD
+  // ──────────────────────────────────────────────
+  Widget _buildDisruptionCard() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 52, bottom: 16, right: 8),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0F9FF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFBAE6FD).withOpacity(0.8)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.thunderstorm_rounded, color: Colors.blue.shade600, size: 18),
+                const SizedBox(width: 8),
+                const Text('Heavy Rain Detected', style: TextStyle(color: Color(0xFF0369A1), fontWeight: FontWeight.w800, fontSize: 13)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text('Area: T Nagar · Deliveries slowing — orders dropped 80%',
+                style: TextStyle(color: Color(0xFF0369A1), fontSize: 11, fontWeight: FontWeight.w500, height: 1.5)),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                Text('Duration: 2 hrs 15 min', style: TextStyle(color: Color(0xFF6B7280), fontSize: 10, fontWeight: FontWeight.w500)),
+                Text('Protection: Active', style: TextStyle(color: Color(0xFF059669), fontSize: 10, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────
+  // BLOCKED CARD (Ride 5)
+  // ──────────────────────────────────────────────
+  Widget _buildBlockedCard() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 52, bottom: 16, right: 8),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFF87171).withOpacity(0.4)),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.block_rounded, color: Color(0xFFEF4444), size: 18),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Income loss detected\n-₹300 expected earnings lost',
+                style: TextStyle(color: Color(0xFF991B1B), fontSize: 12, fontWeight: FontWeight.w700, height: 1.5),
               ),
             ),
           ],
@@ -401,53 +478,118 @@ class _MyShieldScreenContentState extends State<MyShieldScreenContent> with Tick
     );
   }
 
-  Widget _buildRide5() {
-    bool isClaimed = _simulationStep >= 6;
-    return ShakeTransition(
-      animation: _shakeCtrl,
-      child: Column(
-        children: [
-          TimelineItem(
-            icon: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isClaimed ? const Color(0xFFF0FDF4) : const Color(0xFFFEE2E2),
-                border: Border.all(color: isClaimed ? const Color(0xFF16A34A).withOpacity(0.3) : const Color(0xFFEF4444).withOpacity(0.3)),
-              ),
-              child: Center(
-                child: Text('R5', style: TextStyle(color: isClaimed ? const Color(0xFF16A34A) : const Color(0xFFEF4444), fontWeight: FontWeight.w800, fontSize: 11)),
-              ),
-            ),
-            title: 'Ride 5 blocked',
-            subtitle: 'Blocked due to rain · 1:40 PM',
-            amount: '-₹300',
-            time: '',
-            amountColor: const Color(0xFFEF4444),
-            iconBg: Colors.transparent,
-          ),
-          _wrapWithStem(
-            Container(
-              margin: const EdgeInsets.only(bottom: 16, left: 12, right: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFF87171).withOpacity(0.3)),
-              ),
-              child: const Row(
+  // ──────────────────────────────────────────────
+  // CLAIM CARD
+  // ──────────────────────────────────────────────
+  Widget _buildClaimCard() {
+    return ScaleTransition(
+      scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+        CurvedAnimation(parent: _claimCtrl, curve: Curves.elasticOut),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12, bottom: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Shield icon with connector
+            SizedBox(
+              width: 52,
+              child: Column(
                 children: [
-                  Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 16),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Income loss detected\n-₹300 expected earnings lost',
-                      style: TextStyle(color: Color(0xFF991B1B), fontSize: 12, fontWeight: FontWeight.bold, height: 1.4),
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFFEF3C7),
+                      border: Border.all(color: const Color(0xFFE96A10).withOpacity(0.4), width: 1.5),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.shield_rounded, color: Color(0xFFE96A10), size: 18),
                     ),
                   ),
                 ],
               ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 6),
+                  const Text('Claim auto-triggered', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Color(0xFF1A1A1A))),
+                  const SizedBox(height: 3),
+                  const Text('1:45 PM', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 16),
+                  const ClaimAlertCard(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────
+  // PLAN CARD
+  // ──────────────────────────────────────────────
+  Widget _buildPlanCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 36),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF9DDD0), width: 1.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Stack(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xFFEA580C), borderRadius: BorderRadius.circular(20)),
+                        child: const Text('Smart Plan', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          border: Border.all(color: const Color(0xFF86EFAC).withOpacity(0.6)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('active', style: TextStyle(color: Color(0xFF16A34A), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('₹20/week · Renews Apr 9', style: TextStyle(color: Color(0xFF6B7280), fontSize: 14, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const Icon(Icons.gpp_good_outlined, color: Color(0xFFE96A10), size: 30),
+            ],
+          ),
+          Positioned(
+            right: 0, top: 0,
+            child: IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.grey, size: 22),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                _pulseCtrl.reset();
+                _shakeCtrl.reset();
+                _claimCtrl.reset();
+                RideSyncController.instance.reset();
+              },
             ),
           ),
         ],
@@ -455,116 +597,98 @@ class _MyShieldScreenContentState extends State<MyShieldScreenContent> with Tick
     );
   }
 
-  Widget _buildClaimSection() {
-    return Column(
-      children: [
-        const TimelineItem(
-          icon: Icon(Icons.shield_outlined, color: Color(0xFFE96A10), size: 16),
-          title: 'Claim auto-triggered',
-          subtitle: '',
-          amount: '',
-          time: '1:45 PM',
-          iconBg: Color(0xFFFEF3C7),
-        ),
-        ScaleTransition(
-          scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-            CurvedAnimation(parent: _claimCtrl, curve: Curves.elasticOut)
+  bool _isClaimed = false;
+
+  void _handleClaim() {
+    setState(() {
+      _isClaimed = true;
+    });
+    // Shake effect for celebration
+    _shakeCtrl.forward(from: 0);
+  }
+
+  // ──────────────────────────────────────────────
+  // BOTTOM BANNER
+  // ──────────────────────────────────────────────
+  Widget _buildBottomBanner() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      child: _isClaimed 
+        ? _buildSuccessBanner()
+        : Container(
+            key: const ValueKey('claim_pending'),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF22C55E),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -5))],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Your income protection', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                        SizedBox(height: 4),
+                        Text('₹198 coming to you', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                      ],
+                    ),
+                  ),
+                  InkWell(
+                    onTap: _handleClaim,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                      child: const Text('Track', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w900, fontSize: 15)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: _wrapWithStem(const ClaimAlertCard(), isLast: true),
-        ),
-      ],
     );
   }
 
-  Widget _buildBottomBanner() {
+  Widget _buildSuccessBanner() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      key: const ValueKey('claim_success'),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF22C55E),
+        color: const Color(0xFF15803D),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -5)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, -5))],
       ),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+              child: const Icon(Icons.check_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
             const Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Your income protection', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
-                  SizedBox(height: 4),
-                  Text('₹198 coming to you', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                  Text('COMPLETED', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                  SizedBox(height: 2),
+                  Text('₹198 successfully claimed', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text('Track', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
-            ),
+            const Text('ID: #FGY9921', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
     );
   }
-
-  Widget _wrapWithStem(Widget child, {bool isLast = false}) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 48,
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    width: 1.2,
-                    color: Colors.grey.withOpacity(0.15),
-                  ),
-                ),
-                if (isLast) const SizedBox(height: 16),
-              ],
-            ),
-          ),
-          Expanded(child: child),
-        ],
-      ),
-    );
-  }
-
-  _DisruptionCopy _disruptionMeta(DemoDisruption d) {
-    return _DisruptionCopy(
-      icon: Icons.lightbulb_outline, accent: Colors.blue.shade600,
-      headline: 'Heavy rain detected', sub: 'In your active zone',
-      time: '11:30 AM', area: 'T Nagar',
-      detail: 'Deliveries Slowing · orders dropped 80%', duration: '2 hrs 15 min',
-      blockReason: 'Blocked due to rain · Income loss detected',
-    );
-  }
 }
 
-class _DisruptionCopy {
-  final IconData icon;
-  final Color accent;
-  final String headline;
-  final String sub;
-  final String time;
-  final String area;
-  final String detail;
-  final String duration;
-  final String blockReason;
-
-  _DisruptionCopy({
-    required this.icon, required this.accent, required this.headline, required this.sub,
-    required this.time, required this.area, required this.detail, required this.duration,
-    required this.blockReason,
-  });
-}

@@ -21,14 +21,14 @@ class RideTimelineWidget extends StatefulWidget {
 class _RideTimelineWidgetState extends State<RideTimelineWidget>
     with TickerProviderStateMixin {
 
-  // ── 6 animation controllers ────────────────────────────────────────────────
+  // ── 8 animation controllers ────────────────────────────────────────────────
   late final AnimationController _entranceCtrl;   // slide+fade in
   late final AnimationController _progressCtrl;   // progress bar fill
   late final AnimationController _pulseCtrl;      // amber circle pulse
   late final AnimationController _monitorCtrl;    // monitor panel expand
   late final AnimationController _shakeCtrl;      // blocked card shake
   late final AnimationController _claimCtrl;      // claim card bounce
-  late final AnimationController _disruptionCtrl; // disruption/blocked slide up
+  late final AnimationController _disruptionCtrl; // disruption card slide up
   late final AnimationController _bannerCtrl;     // claim banner slide up
 
   int _monitorTextStep = 0;
@@ -100,10 +100,9 @@ class _RideTimelineWidgetState extends State<RideTimelineWidget>
         _pulseCtrl.repeat(reverse: true);
         break;
       case RidePhase.blocked:
-        _disruptionCtrl.value = 1.0;
+        _shakeCtrl.value = 0;
         break;
       case RidePhase.claimTriggered:
-        _disruptionCtrl.value = 1.0;
         _claimCtrl.value = 1.0;
         _bannerCtrl.value = 1.0;
         _monitorTextStep = 3;
@@ -155,6 +154,7 @@ class _RideTimelineWidgetState extends State<RideTimelineWidget>
 
       case RidePhase.disruptionWarning:
         // Amber pulse starts, disruption card slides up
+        _disruptionCtrl.reset();
         _pulseCtrl.repeat(reverse: true);
         Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted) _disruptionCtrl.forward();
@@ -162,18 +162,18 @@ class _RideTimelineWidgetState extends State<RideTimelineWidget>
         break;
 
       case RidePhase.blocked:
-        // Stop pulse, show blocked card, shake it
+        // Stop pulse, show blocked card with shake
         _pulseCtrl
           ..stop()
           ..value = 0;
-        Future.delayed(const Duration(milliseconds: 150), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           if (!mounted) return;
           _shakeCtrl.forward(from: 0);
         });
         break;
 
       case RidePhase.claimTriggered:
-        // Reset shake, bounce claim card in, slide up banner
+        // Replace blocked card with claim card - bounce claim card in, slide up banner
         _shakeCtrl.reset();
         Future.delayed(const Duration(milliseconds: 100), () {
           if (mounted) _claimCtrl.forward();
@@ -327,10 +327,7 @@ class _RideTimelineWidgetState extends State<RideTimelineWidget>
           if (ride.showBlockedCard)
             ShakeTransition(
               controller: _shakeCtrl,
-              child: SlideUpTransition(
-                controller: _disruptionCtrl,
-                child: _BlockedCard(ride: ride),
-              ),
+              child: _BlockedCard(ride: ride),
             ),
 
           // ── Claim card with bounce ────────────────────────────────────────

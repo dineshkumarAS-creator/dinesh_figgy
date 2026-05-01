@@ -33,12 +33,17 @@ class TimelineItem extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  width: 28,
-                  height: 28,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: iconBg ?? Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: (iconBg != null && iconBg != Colors.white) ? Colors.transparent : const Color(0xFF16A34A).withOpacity(0.3), width: 1.2),
+                    border: Border.all(
+                      color: (iconBg == Colors.transparent) 
+                          ? Colors.transparent 
+                          : const Color(0xFF16A34A).withOpacity(0.4), 
+                      width: 1.0
+                    ),
                   ),
                   child: Center(child: icon),
                 ),
@@ -54,7 +59,7 @@ class TimelineItem extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 2, left: 12, bottom: 32),
+              padding: const EdgeInsets.only(top: 2, left: 12, bottom: 36),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -65,10 +70,16 @@ class TimelineItem extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF1A1A1A))),
+                            Text(
+                              title, 
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Color(0xFF1A1A1A))
+                            ),
                             if (subtitle.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Text(subtitle, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 10, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle, 
+                                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500)
+                              ),
                             ],
                           ],
                         ),
@@ -82,18 +93,18 @@ class TimelineItem extends StatelessWidget {
                               amount,
                               style: TextStyle(
                                 color: amountColor ?? (amount.startsWith('+') ? const Color(0xFF1A1A1A) : (amount.startsWith('-') ? const Color(0xFFEF4444) : const Color(0xFF1A1A1A))),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
                               ),
                             ),
                           if (time.isNotEmpty) ...[
-                             const SizedBox(height: 2),
+                             const SizedBox(height: 4),
                              Text(
                               time,
                               style: const TextStyle(
                                 color: Color(0xFF9CA3AF),
                                 fontWeight: FontWeight.w500,
-                                fontSize: 10,
+                                fontSize: 11,
                               ),
                             ),
                           ]

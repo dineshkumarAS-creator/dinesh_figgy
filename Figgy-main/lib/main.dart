@@ -10,6 +10,26 @@ import 'package:figgy_app/services/navigation_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Show error details instead of red block
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    debugPrint('⚠️ WIDGET ERROR: ${details.exception}');
+    debugPrint('⚠️ STACK: ${details.stack}');
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFEF4444)),
+      ),
+      child: Text(
+        'Error: ${details.exception}',
+        style: const TextStyle(color: Color(0xFF991B1B), fontSize: 12),
+      ),
+    );
+  };
+
   final prefs = await SharedPreferences.getInstance();
   
   // For hackathon demo: You can comment this back in to force onboarding if needed

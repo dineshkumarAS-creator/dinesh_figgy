@@ -65,7 +65,7 @@ class RideItem {
   bool get showProgressBar    => phase == RidePhase.inProgress;
   bool get showMonitorPanel   => phase == RidePhase.completedMonitor;
   bool get showDisruptionCard => phase == RidePhase.disruptionWarning;
-  bool get showBlockedCard    => phase == RidePhase.blocked || phase == RidePhase.claimTriggered;
+  bool get showBlockedCard    => phase == RidePhase.blocked;
   bool get showClaimCard      => phase == RidePhase.claimTriggered;
   bool get isAmberPulsing     => phase == RidePhase.disruptionWarning;
   bool get isNegativeAmount   => phase == RidePhase.blocked || phase == RidePhase.claimTriggered;

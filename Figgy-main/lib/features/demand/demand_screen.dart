@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:figgy_app/theme/app_theme.dart';
 import 'package:figgy_app/app/main_wrapper.dart';
 import 'package:figgy_app/models/ride.dart';
+import 'package:figgy_app/core/ride_sync_controller.dart';
 
 // ─────────────────────────────────────────────────────
 // DEMAND SCREEN
@@ -32,7 +33,7 @@ class _DemandScreenState extends State<DemandScreen> {
   int _routeIndex = 0;
   int _subStep = 0;
   int _subSteps = 25;
-  Duration _stepDuration = const Duration(milliseconds: 80);
+  Duration _stepDuration = const Duration(milliseconds: 30);
   bool _autoCenter = true;
 
   final MapController _mapController = MapController();
@@ -121,7 +122,147 @@ class _DemandScreenState extends State<DemandScreen> {
     super.initState();
     completedRides = _generateInitialHistory();
     globalCompletedRidesNotifier.value = List.from(completedRides);
-    _startNewRide();
+    
+    // Fast config for hackathon demo
+    _subSteps = 8;
+    _stepDuration = const Duration(milliseconds: 40);
+    
+    _startSyncedRide();
+  }
+
+  void _startSyncedRide() {
+    final sync = RideSyncController.instance;
+    final index = sync.currentRideIndex;
+    
+    // Stop any current movement
+    _stepTimer?.cancel();
+
+    if (index > 6) return;
+    
+    if (index == 5) {
+      // Index 5 is the "Blocked" stage for Ride 5
+      final pickup = _locations[5]; // Mylapore
+      final drop = _locations[3]; // Adyar
+      final ride = _generateRideFromLocations(pickup, drop);
+      ride.status = 'blocked';
+      
+      setState(() {
+        currentRide = ride;
+        routeCoordinates = [];
+        riderPosition = ride.pickupLatLng;
+      });
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _mapController.move(ride.pickupLatLng, 13.5);
+      });
+      
+      // Auto-trigger claim after a delay
+      Future.delayed(const Duration(seconds: 4), () {
+        if (mounted) {
+          RideSyncController.instance.nextRide(); // → index 6
+        }
+      });
+      return;
+    }
+
+    if (index >= 6) return;
+
+    // Normal Ride Start (1, 2, 3, 4)
+    final pickup = _getPickupForIndex(index);
+    final drop = _getDropForIndex(index);
+    final ride = _generateRideFromLocations(pickup, drop);
+    final route = _generateRouteFallback(ride.pickupLatLng, ride.dropLatLng);
+    
+    // Simulate rain struggle for Ride 4
+    if (index == 4) {
+      _stepDuration = const Duration(milliseconds: 150); // 3-4x slower
+    } else {
+      _stepDuration = const Duration(milliseconds: 40); // normal speed
+    }
+
+    setState(() {
+      currentRide = ride;
+      routeCoordinates = route;
+      riderPosition = route.first;
+      _routeIndex = 0;
+      _subStep = 0;
+      // Pre-set status to show it's preparing
+      currentRide?.status = 'assigned';
+    });
+
+    // Animate map to start
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _mapController.move(ride.pickupLatLng, 13.5);
+    });
+
+    // Start Phase Sequence
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (!mounted || RideSyncController.instance.currentRideIndex != index) return;
+      setState(() => currentRide?.status = 'picked_up');
+      
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (!mounted || RideSyncController.instance.currentRideIndex != index) return;
+        setState(() => currentRide?.status = 'on_the_way');
+        _beginMovement();
+      });
+    });
+  }
+
+  Map<String, dynamic> _getPickupForIndex(int i) {
+    if (i == 1) return _locations[6]; // Nungambakkam
+    if (i == 2) return _locations[1]; // Anna Nagar
+    if (i == 3) return _locations[2]; // Velachery
+    if (i == 4) return _locations[0]; // T Nagar
+    return _locations[0];
+  }
+
+  Map<String, dynamic> _getDropForIndex(int i) {
+    if (i == 1) return _locations[1]; // Anna Nagar
+    if (i == 2) return _locations[2]; // Velachery
+    if (i == 3) return _locations[0]; // T Nagar
+    if (i == 4) return _locations[5]; // Mylapore
+    return _locations[5];
+  }
+
+  Ride _generateRideFromLocations(Map<String, dynamic> pickup, Map<String, dynamic> drop) {
+    final rng = Random();
+    final restIdx = rng.nextInt(_restaurants.length);
+    final restaurant = _restaurants[restIdx];
+    final items = _menuItems[restIdx];
+    final pickedItems = (items.toList()..shuffle(rng)).take(rng.nextInt(2) + 1).toList();
+
+    final pickupAddrs = _addresses[pickup['name']] ?? ['Main Road, ${pickup['name']}'];
+    final dropAddrs = _addresses[drop['name']] ?? ['Main Road, ${drop['name']}'];
+    final orderId = '#SW${rng.nextInt(9000) + 1000}';
+
+    final baseFare = 30 + rng.nextInt(20);
+    final distanceFare = (rng.nextDouble() * 8 + 2).round() * 8;
+    final totalEarnings = baseFare + distanceFare;
+
+    return Ride(
+      pickupName: pickup['name'],
+      pickupLat: pickup['lat'],
+      pickupLng: pickup['lng'],
+      dropName: drop['name'],
+      dropLat: drop['lat'],
+      dropLng: drop['lng'],
+      status: 'assigned',
+      startTime: DateTime.now(),
+      distance: 4.5,
+      earnings: totalEarnings,
+      restaurantName: restaurant['name'],
+      restaurantAddress: pickupAddrs[0],
+      customerName: _customerNames[rng.nextInt(_customerNames.length)],
+      customerAddress: dropAddrs[0],
+      orderItems: pickedItems,
+      orderId: orderId,
+      baseFare: baseFare,
+      distanceFare: distanceFare,
+      surgeBonus: 0,
+      tip: 0,
+      paymentMode: 'UPI',
+      customerRating: 4.8,
+    );
   }
 
   @override
@@ -276,8 +417,12 @@ class _DemandScreenState extends State<DemandScreen> {
         globalCompletedRidesNotifier.value = List.from(completedRides);
         currentRide = null;
       });
-      Future.delayed(const Duration(seconds: 5), () {
-        if (mounted) _startNewRide();
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          final sync = RideSyncController.instance;
+          sync.nextRide();
+          _startSyncedRide();
+        }
       });
       return;
     }
@@ -285,6 +430,15 @@ class _DemandScreenState extends State<DemandScreen> {
     final from = route[_routeIndex];
     final to = route[_routeIndex + 1];
     final t = _subStep / _subSteps;
+
+    // Update global progress safely
+    final totalSteps = max(1, (route.length - 1) * _subSteps);
+    final currentStep = _routeIndex * _subSteps + _subStep;
+    final int safeTotalSteps = totalSteps > 0 ? totalSteps : 1;
+    final double globalProgress = (currentStep / safeTotalSteps).clamp(0.0, 1.0);
+    
+    final double safeProgress = globalProgress.isNaN ? 0.0 : globalProgress;
+    RideSyncController.instance.updateProgress(safeProgress);
 
     setState(() {
       riderPosition = LatLng(
@@ -466,6 +620,28 @@ class _DemandScreenState extends State<DemandScreen> {
                       urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
                       userAgentPackageName: 'com.figgy.app',
                     ),
+                    // Red overlay for blocked state
+                    if (RideSyncController.instance.isRideBlocked)
+                    // Red overlay for blocked state (Premium Pulsing Alert)
+                    if (RideSyncController.instance.isRideBlocked)
+                      CircleLayer(
+                        circles: [
+                          CircleMarker(
+                            point: const LatLng(13.0418, 80.2341), // Center around T Nagar / Mylapore
+                            radius: 3000,
+                            useRadiusInMeter: true,
+                            color: Colors.red.withOpacity(0.12),
+                            borderStrokeWidth: 2,
+                            borderColor: Colors.red.withOpacity(0.3),
+                          ),
+                          CircleMarker(
+                            point: const LatLng(13.0418, 80.2341),
+                            radius: 1500,
+                            useRadiusInMeter: true,
+                            color: Colors.red.withOpacity(0.2),
+                          ),
+                        ],
+                      ),
                     // ── Hotspot Layers ───────────────────────────
                     CircleLayer(circles: [
                       // High Demand (Red)
